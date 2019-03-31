@@ -1,0 +1,9 @@
+runtime: python37
+
+handlers:
+- url: /img/(.*\.png)
+  static_files: www/img/\1
+  upload: www/img/.*
+- url: /js/(.*\.js)
+  static_files: www/js/\1
+  upload: www/js/.*
