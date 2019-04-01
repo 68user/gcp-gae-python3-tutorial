@@ -1,1 +1,4 @@
-# gcp-gae-python3-tutorial
+このプログラムはチュートリアル用です。
+https://cloud-textbook.com/2577/ で解説しています。
+
+
