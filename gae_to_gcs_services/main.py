@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 from flask import Flask
-from google.cloud import bigquery
 
 app = Flask(__name__)
-bigquery_client = bigquery.Client()
 
                     
 @app.route('/')
@@ -12,6 +10,7 @@ def do_main():
 <p>GCP の各サービスと連携するサンプルです。</p>
 <ul>
    <li><a href="/bqquery">BigQuery</a></li>
+   <li><a href="/storage">Cloud Storage (GCS)</a></li>
 </ul>
 """
 
@@ -19,6 +18,9 @@ def do_main():
 @app.route('/bqquery')
 def do_bqquery():
     from flask import render_template_string
+    from google.cloud import bigquery
+
+    bigquery_client = bigquery.Client()
 
     sql = """
 #StandardSQL
@@ -51,7 +53,7 @@ table th, table td {
   font-size: 70%;
 }
 </style>
-<table style="  border-collapse: collapse">
+<table style="border-collapse: collapse">
   <thead>
     <th>catalog_name</th>
     <th>schema_name</th>
@@ -78,6 +80,47 @@ table th, table td {
                cost_usd = cost_usd,
                cost_jpy = cost_jpy,
                results = results)
+
+
+@app.route('/storage')
+def do_storage():
+    from flask import render_template_string
+    from google.cloud import storage
+
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket('gcp-public-data-landsat')
+
+    blob_list = bucket.list_blobs(prefix='LC08/PRE/044/034/LC80440342016259LGN00/',
+                                  max_results=5)
+
+    blob = bucket.get_blob('LC08/PRE/044/034/LC80440342016259LGN00/'
+                           'LC80440342016259LGN00_MTL.txt')
+    content = blob.download_as_string().decode(encoding='ASCII')
+
+    return render_template_string("""
+<p>オブジェクト一覧</p>
+<ul>
+  {% for b in blob_list %}
+    <li>
+      サイズ: {{ b.size }}
+      オブジェクト名: {{ b.name }}
+    </li>
+  {% endfor %}
+</ul>
+<p>オブジェクト</p>
+<ul>
+  <li>バケット: {{ bucket }}</li>
+  <li>オブジェクト名: {{ name }}</li>
+  <li>サイズ: {{ size }}</li>
+  <li>オブジェクト内容: <pre>{{ content }}</pre></li>
+</ul>
+    """,
+                                  blob_list = blob_list,
+                                  bucket = blob.bucket.name,
+                                  name = blob.name,
+                                  size = blob.size,
+                                  content = content)
+
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080, debug=True)
