@@ -7,3 +7,7 @@ handlers:
 - url: /js/(.*\.js)
   static_files: www/js/\1
   upload: www/js/.*
+
+env_variables:
+  MYENV1: "HOGE"
+  MYENV2: "FUGA"
