@@ -233,7 +233,7 @@ def do_ext_requests():
                                   body=res.text
     )
 
-@app.route('/cat')
+#@app.route('/cat')
 def do_cat():
     path = request.args.get('path')
     with open(path) as f:
@@ -241,7 +241,7 @@ def do_cat():
     return "<pre>"+buf+"</pre>"
 
 
-@app.route('/ls')
+#@app.route('/ls')
 def do_ls():
     from flask import request
     import os
