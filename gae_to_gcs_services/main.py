@@ -11,6 +11,8 @@ def do_main():
 <ul>
    <li><a href="/bqquery">BigQuery</a></li>
    <li><a href="/storage">Cloud Storage (GCS)</a></li>
+   <li><a href="/pubsub_publish">Cloud Pub/Sub へ Publish</a></li>
+   <li><a href="/pubsub_pull">Cloud Pub/Sub から Pull</a></li>
 </ul>
 """
 
@@ -121,6 +123,77 @@ def do_storage():
                                   size = blob.size,
                                   content = content)
 
+@app.route('/pubsub_publish')
+def do_pubsub_publish():
+    from flask import render_template_string
+    from google.cloud import pubsub_v1
+    import os
+
+    topic_name='mytopic'
+    project_id=os.environ.get('GOOGLE_CLOUD_PROJECT')
+
+    topic_path = 'projects/{project_id}/topics/{topic_name}'.format(
+        project_id=project_id,
+        topic_name=topic_name,
+    )
+    publisher = pubsub_v1.PublisherClient()
+
+    from datetime import datetime
+    message = "current time is {}".format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+
+    future = publisher.publish(topic_path, message.encode('utf-8'), attr1='abc', attr2='def')
+    message_id = future.result()
+
+    return render_template_string("""
+<p>Pub/Sub message published.
+<ul>
+  <li>topic [{{ topic_path }}]</li>
+  <li>message is [{{ message }}]</li>
+  <li>message_id is [{{ message_id }}]</li>
+</ul>
+        """,
+                                  topic_path = topic_path,
+                                  message = message,
+                                  message_id = message_id,
+    )
+
+@app.route('/pubsub_pull')
+def do_pubsub_pull():
+    from flask import render_template_string
+    from google.cloud import pubsub_v1
+    import os
+
+    topic_name='mytopic'
+    sub_name='mysub'
+
+    project_id=os.environ.get('GOOGLE_CLOUD_PROJECT')
+    sub_path = 'projects/{project_id}/subscriptions/{subscription}'.format(
+        project_id=project_id,
+        subscription=sub_name
+    )
+
+    subscriber = pubsub_v1.SubscriberClient()
+
+    response = subscriber.pull(sub_path, max_messages=1, return_immediately=True)
+    if len(response.received_messages) == 0:
+        return "No messages"
+
+    msg = response.received_messages[0]
+    # ここで何らかの処理をする (DB に格納する、ファイルを生成するなど)
+    subscriber.acknowledge(sub_path, [msg.ack_id])
+
+    return render_template_string("""
+<p>Pub/Sub message pulled and acked.
+<ul>
+  <li>subscription [{{ sub_path }}]</li>
+  <li>message is [{{ message }}]</li>
+  <li>ack_id is [{{ ack_id }}]</li>
+</ul>
+        """,
+                                  sub_path = sub_path,
+                                  message = msg.message,
+                                  ack_id = msg.ack_id,
+    )
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080, debug=True)
