@@ -1,10 +1,8 @@
 #!/usr/bin/python3
 from flask import Flask
-from google.cloud import bigquery
 from flask_httpauth import HTTPBasicAuth
 
 app = Flask(__name__)
-bigquery_client = bigquery.Client()
 auth = HTTPBasicAuth()
 
 users = {
@@ -21,6 +19,7 @@ def get_password(username):
 @app.route('/authpage')
 @auth.login_required
 def authpage():
+    from flask import escape
     return "{} でログイン中です!".format(escape(auth.username()))
 
                     
@@ -36,7 +35,6 @@ def do_main():
    <li><a href="/error503">503 サンプル</a></li>
    <li><a href="/getvar?text=hoge">GETパラメータ (text) 取得・表示</a></li>
    <li><a href="/pathvar/hoge/123">パスパラメータ (/hoge/123) 取得・表示</a></li>
-   <li><a href="/bigquery">BigQuery</a></li>
    <li><a href="/logging">ログ出力</a></li>
    <li><a href="/authpage">Basic認証 (ID: myuser、パスワード: mypass)</a></li>
    <li><a href="/fileread">ファイル読み込み</a></li>
@@ -85,51 +83,6 @@ def do_logging():
     logging.info('info です')
     logging.debug('debug です')
     return "logging OK"
-
-@app.route('/bigquery')
-def bqdatasets():
-    from flask import render_template_string
-    import concurrent.futures
-    
-    query_job = bigquery_client.query("""
-xselect * FROM
- `bigquery-public-data.INFORMATION_SCHEMA`.SCHEMATA
- order by schema_name
-    """)
-
-    try:
-        results = query_job.result(timeout=30)
-    except concurrent.futures.TimeoutError:
-        return "{} がタイムアウト".format(query_job.job_id)
-
-    return render_template_string("""
-<style type="text/css">
-table th, table td {
-  border: 1px solid black;
-  font-size: 70%;
-}
-</style>
-<table style="  border-collapse: collapse">
-  <thead>
-    <th>catalog_name</th>
-    <th>schema_name</th>
-    <th>location</th>
-    <th>creation_time</th>
-    <th>last_modified_time</th>
-  </thead>
-  <tbody>
-    {% for row in results %}
-      <tr>
-        <td>{{ row.catalog_name }}</td>
-        <td>{{ row.schema_name }}</td>
-        <td>{{ row.location }}</td>
-        <td>{{ row.creation_time }}</td>
-        <td>{{ row.last_modified_time }}</td>
-      </tr>
-    {% endfor  %}
-  </tbody>
-</table>
-    """, results = results)
 
 @app.route('/runcommand')
 def do_runcommand():
